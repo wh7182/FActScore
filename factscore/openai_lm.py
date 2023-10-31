@@ -8,20 +8,21 @@ import logging
 
 class OpenAIModel(LM):
 
-    def __init__(self, model_name, cache_file=None, key_path="api.key"):
+    def __init__(self, model_name, api_key, api_version, api_type, api_base, temp, cache_file=None):
         self.model_name = model_name
-        self.key_path = key_path
-        self.temp = 0.7
+        self.api_key = api_key
+        self.api_version = api_version
+        self.api_type = api_type
+        self.api_base = api_base
+        self.temp = temp
         self.save_interval = 100
         super().__init__(cache_file)
 
     def load_model(self):
-        # load api key
-        key_path = self.key_path
-        assert os.path.exists(key_path), f"Please place your OpenAI APT Key in {key_path}."
-        with open(key_path, 'r') as f:
-            api_key = f.readline()
-        openai.api_key = api_key.strip()
+        openai.api_key = self.api_key
+        openai.api_version = self.api_version
+        openai.api_type = self.api_type
+        openai.api_base = self.api_base
         self.model = self.model_name
 
     def _generate(self, prompt, max_sequence_length=2048, max_output_length=128):
@@ -29,23 +30,26 @@ class OpenAIModel(LM):
             self.save_cache()
         # return a tuple of string (generated text) and metadata (any format)
         # This should be about generating a response from the prompt, no matter what the application is
-        if self.model_name == "ChatGPT":
-            # Construct the prompt send to ChatGPT
-            message = [{"role": "user", "content": prompt}]
-            # Call API
-            response = call_ChatGPT(message, temp=self.temp, max_len=max_sequence_length)
-            # Get the output from the response
-            output = response["choices"][0]["message"]["content"]
-            return output, response
-        elif self.model_name == "InstructGPT":
-            # Call API
-            response = call_GPT3(prompt, temp=self.temp)
-            # Get the output from the response
-            output = response["choices"][0]["text"]
-            return output, response
-        else:
-            raise NotImplementedError()
+        response = run_chat_completion(prompt, max_tokens=max_sequence_length, temp=self.temp, engine=self.model_name)
+        # Get the output from the response
+        output = response["choices"][0]["message"]["content"]
+        return output, response
 
+def run_chat_completion(prompt, max_tokens=1000, temp=0.0, engine='gpt-4-32k'):
+
+    messages = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": prompt},
+    ]
+
+    response = openai.ChatCompletion.create(
+        engine=engine, 
+        messages=messages, 
+        max_tokens=max_tokens
+    )
+
+    return response
+    
 def call_ChatGPT(message, model_name="gpt-3.5-turbo", max_len=1024, temp=0.7, verbose=False):
     # call GPT-3 API until result is provided and then return it
     response = None
