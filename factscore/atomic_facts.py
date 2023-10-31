@@ -18,12 +18,12 @@ nltk.download("punkt")
 
 
 class AtomicFactGenerator(object):
-    def __init__(self, api_key, api_version, api_type, api_base, temp, demon_dir, gpt3_cache_file=None):
+    def __init__(self, model_name, api_key, api_version, api_type, api_base, temp, demon_dir, temp, gpt3_cache_file=None):
         self.nlp = spacy.load("en_core_web_sm")
         self.is_bio = True
         self.demon_path = os.path.join(demon_dir, "demons.json" if self.is_bio else "demons_complex.json")
 
-        self.openai_lm = OpenAIModel("InstructGPT", cache_file=gpt3_cache_file, key_path=key_path)
+        self.openai_lm = OpenAIModel(model_name=model_name, api_key=api_key, api_version=api_version, api_type=api_type, api_base=api_base, temp=temp, cache_file='' if gpt3_cache_file is None else gpt3_cache_file)
 
         # get the demos
         with open(self.demon_path, 'r') as f:
